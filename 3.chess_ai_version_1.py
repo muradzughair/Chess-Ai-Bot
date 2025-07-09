@@ -272,6 +272,7 @@ def draw_board():
         for col in range(8):
             color = WHITE if (row + col) % 2 == 0 else BLACK
             pygame.draw.rect(screen, color, (col * SQUARE_SIZE, row * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE))
+            
 
 def draw_pieces():
     for row in range(8):
