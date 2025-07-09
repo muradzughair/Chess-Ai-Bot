@@ -26,7 +26,7 @@ def draw_board():
             # first parameter for screen, second parameter for the color, third one (x postion, y postion, width, height)
 
 
-# chess peices pictures:
+# chess peices pictures (download the pictures from the repo and puth their path here):
 pieces = {
     "wp": pygame.image.load("C:/Users/user/Desktop/projects/2.chess/images/w_pawn.png"),
     "wr": pygame.image.load("C:/Users/user/Desktop/projects/2.chess/images/w_rook.png"),
