@@ -294,6 +294,7 @@ def draw_pieces():
                 text_rect = text.get_rect(center=(col*SQUARE_SIZE + SQUARE_SIZE//2, row*SQUARE_SIZE + SQUARE_SIZE//2))
                 screen.blit(text, text_rect)
 
+
 # Main game loop
 while running:
     for event in pygame.event.get():
