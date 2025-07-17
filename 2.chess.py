@@ -2,31 +2,20 @@ import pygame
 
 pygame.init()
 
-# the borad:
-
-# the screen size
+# Screen settings
 WIDTH, HEIGHT = 800, 800
-# each square size
 SQUARE_SIZE = WIDTH // 8
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Chess Board")
 
-# the chess colors
+# Colors
 WHITE = (238, 238, 210)
 BLACK = (118, 150, 86)
+HIGHLIGHT = (247, 247, 105, 150)  # Yellow for selected piece
+GREEN = (0, 255, 0, 150)         # Green for empty squares
+RED = (255, 0, 0, 150)           # Red for captures
 
-# function to draw the borad
-def draw_board():
-    for row in range(8):
-        for col in range(8):
-            # white if even and balck id odd
-            color = WHITE if (row + col) % 2 == 0 else BLACK
-            # put the square in the right place with the right color
-            pygame.draw.rect(screen, color, (col * SQUARE_SIZE, row * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE))
-            # first parameter for screen, second parameter for the color, third one (x postion, y postion, width, height)
-
-
-# chess peices pictures (download the pictures from the repo and puth their path here):
+# Load piece images
 pieces = {
     "wp": pygame.image.load("C:/Users/user/Desktop/projects/2.chess/images/w_pawn.png"),
     "wr": pygame.image.load("C:/Users/user/Desktop/projects/2.chess/images/w_rook.png"),
@@ -42,11 +31,11 @@ pieces = {
     "bk": pygame.image.load("C:/Users/user/Desktop/projects/2.chess/images/b_king.png"),
 }
 
-# Resize the chess pieces to fit the squares
-for i in pieces:
-    pieces[i] = pygame.transform.scale(pieces[i], (SQUARE_SIZE, SQUARE_SIZE))
+# Resize pieces
+for key in pieces:
+    pieces[key] = pygame.transform.scale(pieces[key], (SQUARE_SIZE, SQUARE_SIZE))
 
-# Initial chess board setup
+# Initial board setup
 chess_board = [
     ["br", "bn", "bb", "bq", "bk", "bb", "bn", "br"],
     ["bp", "bp", "bp", "bp", "bp", "bp", "bp", "bp"],
@@ -58,80 +47,168 @@ chess_board = [
     ["wr", "wn", "wb", "wq", "wk", "wb", "wn", "wr"],
 ]
 
+def draw_board():
+    """Draw the chess board"""
+    for row in range(8):
+        for col in range(8):
+            color = WHITE if (row + col) % 2 == 0 else BLACK
+            pygame.draw.rect(screen, color, (col * SQUARE_SIZE, row * SQUARE_SIZE, SQUARE_SIZE, SQUARE_SIZE))
+
 def draw_pieces():
-    """Draw the chess pieces on the board."""
+    """Draw chess pieces on the board"""
     for row in range(8):
         for col in range(8):
             piece = chess_board[row][col]
             if piece != "":
                 screen.blit(pieces[piece], (col * SQUARE_SIZE, row * SQUARE_SIZE))
 
+def draw_highlights(selected_pos):
+    """Draw highlights for selected piece and valid moves"""
+    if selected_pos:
+        row, col = selected_pos
+        piece = chess_board[row][col]
+        
+        # Highlight selected piece
+        s = pygame.Surface((SQUARE_SIZE, SQUARE_SIZE), pygame.SRCALPHA)
+        s.fill(HIGHLIGHT)
+        screen.blit(s, (col * SQUARE_SIZE, row * SQUARE_SIZE))
+        
+        # Highlight valid moves
+        for r in range(8):
+            for c in range(8):
+                if is_valid_move(piece, (row, col), (r, c)):
+                    s = pygame.Surface((SQUARE_SIZE, SQUARE_SIZE), pygame.SRCALPHA)
+                    # Use red for captures, green for empty squares
+                    if chess_board[r][c] != "":
+                        s.fill(RED)
+                    else:
+                        s.fill(GREEN)
+                    screen.blit(s, (c * SQUARE_SIZE, r * SQUARE_SIZE))
 
 def is_valid_move(piece, start, end):
-    """
-    Checks if the move is valid based on the piece type.
-    - piece: a string like "wp" (white pawn), "bk" (black king)
-    - start: (row, col) starting position
-    - end: (row, col) target position
-    """
+    """Check if a move is valid for a given piece"""
     start_row, start_col = start
     end_row, end_col = end
 
-    if piece == "wp":  # White Pawn
-        if start_col == end_col:  # Moving straight
-            if end_row == start_row - 1:  # Normal move
-                return True
-            elif start_row == 6 and end_row == 4:  # First move, double step
-                return True
-        # Capturing diagonally
-        elif abs(start_col - end_col) == 1 and end_row == start_row - 1:
-            return True
+    # Check if move is within bounds
+    if not (0 <= end_row < 8 and 0 <= end_col < 8):
+        return False
 
-    elif piece == "bp":  # Black Pawn
+    # Get piece color and type
+    color = piece[0]
+    piece_type = piece[1]
+    target = chess_board[end_row][end_col]
+
+    # Check if target is own piece
+    if target and target[0] == color:
+        return False
+
+    # Pawn movement
+    if piece_type == 'p':
+        direction = -1 if color == 'w' else 1
+        start_rank = 6 if color == 'w' else 1
+
+        # Forward move
         if start_col == end_col:
-            if end_row == start_row + 1:
-                return True
-            elif start_row == 1 and end_row == 3:
-                return True
-        elif abs(start_col - end_col) == 1 and end_row == start_row + 1:
-            return True
+            if target == "":
+                # Single step
+                if end_row == start_row + direction:
+                    return True
+                # Double step from starting position
+                if (start_row == start_rank and 
+                    end_row == start_row + 2 * direction and 
+                    chess_board[start_row + direction][start_col] == ""):
+                    return True
+            return False
+        
+        # Capture
+        elif abs(start_col - end_col) == 1 and end_row == start_row + direction:
+            return target != ""  # Must capture opponent's piece
 
-    elif piece in ["wr", "br"]:  # Rook (White or Black)
-        return start_row == end_row or start_col == end_col  # Move in straight lines
+    # Knight movement (L-shape)
+    elif piece_type == 'n':
+        return (abs(start_row - end_row), abs(start_col - end_col)) in [(2, 1), (1, 2)]
 
-    elif piece in ["wb", "bb"]:  # Bishop (White or Black)
-        return abs(start_row - end_row) == abs(start_col - end_col)  # Move diagonally
+    # Bishop movement (diagonal)
+    elif piece_type == 'b':
+        if abs(start_row - end_row) != abs(start_col - end_col):
+            return False
+        
+        row_step = 1 if end_row > start_row else -1
+        col_step = 1 if end_col > start_col else -1
+        row, col = start_row + row_step, start_col + col_step
+        
+        while row != end_row and col != end_col:
+            if chess_board[row][col] != "":
+                return False
+            row += row_step
+            col += col_step
+        return True
 
-    elif piece in ["wq", "bq"]:  # Queen (White or Black)
-        return (start_row == end_row or start_col == end_col) or \
-               (abs(start_row - end_row) == abs(start_col - end_col))  # Like Rook & Bishop
+    # Rook movement (straight)
+    elif piece_type == 'r':
+        if start_row == end_row:  # Horizontal
+            step = 1 if end_col > start_col else -1
+            for col in range(start_col + step, end_col, step):
+                if chess_board[start_row][col] != "":
+                    return False
+        elif start_col == end_col:  # Vertical
+            step = 1 if end_row > start_row else -1
+            for row in range(start_row + step, end_row, step):
+                if chess_board[row][start_col] != "":
+                    return False
+        else:
+            return False
+        return True
 
-    elif piece in ["wk", "bk"]:  # King (White or Black)
-        return max(abs(start_row - end_row), abs(start_col - end_col)) == 1  # One step any direction
+    # Queen movement (rook + bishop)
+    elif piece_type == 'q':
+        if start_row == end_row or start_col == end_col:  # Rook-like
+            if start_row == end_row:
+                step = 1 if end_col > start_col else -1
+                for col in range(start_col + step, end_col, step):
+                    if chess_board[start_row][col] != "":
+                        return False
+            else:
+                step = 1 if end_row > start_row else -1
+                for row in range(start_row + step, end_row, step):
+                    if chess_board[row][start_col] != "":
+                        return False
+        elif abs(start_row - end_row) == abs(start_col - end_col):  # Bishop-like
+            row_step = 1 if end_row > start_row else -1
+            col_step = 1 if end_col > start_col else -1
+            row, col = start_row + row_step, start_col + col_step
+            while row != end_row and col != end_col:
+                if chess_board[row][col] != "":
+                    return False
+                row += row_step
+                col += col_step
+        else:
+            return False
+        return True
 
-    elif piece in ["wn", "bn"]:  # Knight (White or Black)
-        return (abs(start_row - end_row), abs(start_col - end_col)) in [(2, 1), (1, 2)]  # L-shape move
+    # King movement (one square any direction)
+    elif piece_type == 'k':
+        return max(abs(start_row - end_row), abs(start_col - end_col)) == 1
 
-    return False  # If move does not match any rule
+    return False
 
-
-def is_king_in_check(board, king_color):
-    """
-    Checks if the king is under attack.
-    - board: current chess board
-    - king_color: "w" for white, "b" for black
-    """
+def is_king_in_check(board, color):
+    """Check if the king of the given color is in check"""
     king_pos = None
     enemy_pieces = []
 
-    # Find King position and enemy pieces
+    # Find king and enemy pieces
     for r in range(8):
         for c in range(8):
             piece = board[r][c]
-            if piece == king_color + "k":
+            if piece == color + "k":
                 king_pos = (r, c)
-            elif piece and piece[0] != king_color:
+            elif piece and piece[0] != color:
                 enemy_pieces.append((piece, (r, c)))
+
+    if king_pos is None:
+        return False  # Shouldn't happen in a valid game
 
     # Check if any enemy piece can attack the king
     for piece, pos in enemy_pieces:
@@ -140,30 +217,37 @@ def is_king_in_check(board, king_color):
 
     return False
 
-
 def has_legal_moves(board, turn):
+    """Check if the player has any legal moves"""
     for r in range(8):
         for c in range(8):
             piece = board[r][c]
-            if piece and piece[0] == turn:  # Check only current player's pieces
+            if piece and piece[0] == turn:
                 for nr in range(8):
                     for nc in range(8):
                         if is_valid_move(piece, (r, c), (nr, nc)):
-                            return True
+                            # Make temporary move
+                            temp_board = [row[:] for row in board]
+                            temp_board[nr][nc] = piece
+                            temp_board[r][c] = ""
+                            if not is_king_in_check(temp_board, turn):
+                                return True
     return False
 
-
-
+# Game state
 selected_piece = None
 selected_pos = None
 turn = "w"  # White moves first
-running=True
+running = True
+game_over = False
+
+# Main game loop
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
         
-        elif event.type == pygame.MOUSEBUTTONDOWN:
+        elif event.type == pygame.MOUSEBUTTONDOWN and not game_over:
             x, y = pygame.mouse.get_pos()
             row, col = y // SQUARE_SIZE, x // SQUARE_SIZE
 
@@ -172,23 +256,30 @@ while running:
                     selected_piece = chess_board[row][col]
                     selected_pos = (row, col)
             else:  # Moving a piece
-                
-                if is_valid_move(selected_piece, selected_pos, (row, col)):  # Check valid move
+                if is_valid_move(selected_piece, selected_pos, (row, col)):
+                    # Make the move
                     chess_board[row][col] = selected_piece
                     chess_board[selected_pos[0]][selected_pos[1]] = ""
-                    turn = "b" if turn == "w" else "w"  # Switch turns
-                    # **Check for Checkmate or Stalemate**
+                    
+                    # Switch turns
+                    turn = "b" if turn == "w" else "w"
+                    
+                    # Check for game over
                     if not has_legal_moves(chess_board, turn):
                         if is_king_in_check(chess_board, turn):
-                            print(f"Checkmate! {turn} loses.")
+                            print(f"Checkmate! {'Black' if turn == 'w' else 'White'} wins!")
                         else:
                             print("Stalemate! It's a draw.")
-                        running = False  # End game loop
+                        game_over = True
+                
                 selected_piece = None
                 selected_pos = None
 
+    # Draw everything
     draw_board()
+    draw_highlights(selected_pos)  # Draw highlights before pieces
     draw_pieces()
+    
     pygame.display.flip()
 
 pygame.quit()
