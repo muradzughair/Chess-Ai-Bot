@@ -5,15 +5,19 @@ import random
 
 pygame.init()
 
-# the board:
+# Screen settings
 WIDTH, HEIGHT = 800, 800
 SQUARE_SIZE = WIDTH // 8
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("Chess Board")
 
-# the chess colors
+# Colors
 WHITE = (238, 238, 210)
 BLACK = (118, 150, 86)
+HIGHLIGHT = (247, 247, 105, 150)  # Yellow for selected piece
+GREEN = (0, 255, 0, 150)         # Green for empty squares
+RED = (255, 0, 0, 150)           # Red for captures
+CHECK = (255, 100, 100, 200)     # Red tint for king in check
 
 # Piece values for evaluation
 PIECE_VALUES = {
@@ -21,6 +25,7 @@ PIECE_VALUES = {
 }
 
 def draw_board():
+    """Draw the chess board"""
     for row in range(8):
         for col in range(8):
             color = WHITE if (row + col) % 2 == 0 else BLACK
@@ -41,6 +46,7 @@ pieces = {
     "bq": pygame.image.load("C:/Users/user/Desktop/projects/2.chess/images/b_queen.png"),
     "bk": pygame.image.load("C:/Users/user/Desktop/projects/2.chess/images/b_king.png"),
 }
+
 # Resize the chess pieces
 for i in pieces:
     pieces[i] = pygame.transform.scale(pieces[i], (SQUARE_SIZE, SQUARE_SIZE))
@@ -58,11 +64,58 @@ chess_board = [
 ]
 
 def draw_pieces():
+    """Draw chess pieces on the board"""
     for row in range(8):
         for col in range(8):
             piece = chess_board[row][col]
             if piece != "":
                 screen.blit(pieces[piece], (col * SQUARE_SIZE, row * SQUARE_SIZE))
+
+def draw_highlights(selected_pos):
+    """Draw highlights for selected piece and valid moves"""
+    if selected_pos:
+        row, col = selected_pos
+        piece = chess_board[row][col]
+        
+        # Highlight selected piece
+        s = pygame.Surface((SQUARE_SIZE, SQUARE_SIZE), pygame.SRCALPHA)
+        s.fill(HIGHLIGHT)
+        screen.blit(s, (col * SQUARE_SIZE, row * SQUARE_SIZE))
+        
+        # Highlight valid moves
+        for r in range(8):
+            for c in range(8):
+                if is_valid_move(piece, (row, col), (r, c)):
+                    # Check if move would leave king in check
+                    temp_board = copy.deepcopy(chess_board)
+                    temp_board[r][c] = piece
+                    temp_board[row][col] = ""
+                    if not is_king_in_check(temp_board, piece[0]):
+                        s = pygame.Surface((SQUARE_SIZE, SQUARE_SIZE), pygame.SRCALPHA)
+                        # Use red for captures, green for empty squares
+                        if chess_board[r][c] != "":
+                            s.fill(RED)
+                        else:
+                            s.fill(GREEN)
+                        screen.blit(s, (c * SQUARE_SIZE, r * SQUARE_SIZE))
+
+def highlight_check():
+    """Highlight the king if it's in check"""
+    for color in ['w', 'b']:
+        king_pos = find_king(chess_board, color)
+        if king_pos and is_king_in_check(chess_board, color):
+            row, col = king_pos
+            s = pygame.Surface((SQUARE_SIZE, SQUARE_SIZE), pygame.SRCALPHA)
+            s.fill(CHECK)
+            screen.blit(s, (col * SQUARE_SIZE, row * SQUARE_SIZE))
+
+def find_king(board, color):
+    """Find the position of the king of the given color"""
+    for row in range(8):
+        for col in range(8):
+            if board[row][col] == f"{color}k":
+                return (row, col)
+    return None
 
 def is_valid_move(piece, start, end):
     if not end:  # Check if end position is valid
@@ -318,12 +371,17 @@ selected_piece = None
 selected_pos = None
 turn = "w"  # White moves first
 running = True
+game_over = False
+checkmate = False
+stalemate = False
+
+# Main game loop
 while running:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
         
-        elif event.type == pygame.MOUSEBUTTONDOWN:
+        elif event.type == pygame.MOUSEBUTTONDOWN and not game_over:
             if turn == "w":  # Only allow human to move when it's their turn
                 x, y = pygame.mouse.get_pos()
                 row, col = y // SQUARE_SIZE, x // SQUARE_SIZE
@@ -334,23 +392,33 @@ while running:
                         selected_pos = (row, col)
                 else:  # Moving a piece
                     if is_valid_move(selected_piece, selected_pos, (row, col)):
-                        # Make the move
-                        chess_board[row][col] = selected_piece
-                        chess_board[selected_pos[0]][selected_pos[1]] = ""
-                        turn = "b"  # Switch to AI's turn
+                        # Make temporary move to check if it leaves king in check
+                        temp_board = copy.deepcopy(chess_board)
+                        temp_board[row][col] = selected_piece
+                        temp_board[selected_pos[0]][selected_pos[1]] = ""
                         
-                        # Check for game end conditions
-                        if not has_legal_moves(chess_board, turn):
-                            if is_king_in_check(chess_board, turn):
-                                print(f"Checkmate! {turn} loses.")
-                            else:
-                                print("Stalemate! It's a draw.")
-                            running = False
+                        if not is_king_in_check(temp_board, turn):
+                            # Make the actual move
+                            chess_board[row][col] = selected_piece
+                            chess_board[selected_pos[0]][selected_pos[1]] = ""
+                            turn = "b"  # Switch to AI's turn
+                            
+                            # Check for game end conditions
+                            if not has_legal_moves(chess_board, turn):
+                                if is_king_in_check(chess_board, turn):
+                                    print(f"Checkmate! {'Black' if turn == 'w' else 'White'} wins!")
+                                    game_over = True
+                                    checkmate = True
+                                else:
+                                    print("Stalemate! It's a draw.")
+                                    game_over = True
+                                    stalemate = True
+                    
                     selected_piece = None
                     selected_pos = None
     
     # AI's turn (Black)
-    if turn == "b" and running:
+    if turn == "b" and not game_over:
         pygame.time.delay(500)  # Add small delay so AI doesn't move instantly
         if ai_move():
             turn = "w"  # Switch back to human's turn
@@ -358,21 +426,29 @@ while running:
             # Check for game end conditions
             if not has_legal_moves(chess_board, turn):
                 if is_king_in_check(chess_board, turn):
-                    print(f"Checkmate! {turn} loses.")
+                    print(f"Checkmate! {'Black' if turn == 'w' else 'White'} wins!")
+                    game_over = True
+                    checkmate = True
                 else:
                     print("Stalemate! It's a draw.")
-                running = False
+                    game_over = True
+                    stalemate = True
 
+    # Draw everything
     draw_board()
+    highlight_check()  # Highlight king if in check
+    draw_highlights(selected_pos)  # Draw highlights before pieces
     draw_pieces()
     
-    # Highlight selected piece
-    if selected_piece:
-        row, col = selected_pos
-        highlight_color = (255, 255, 0, 100)  # Yellow with transparency
-        s = pygame.Surface((SQUARE_SIZE, SQUARE_SIZE), pygame.SRCALPHA)
-        s.fill((255, 255, 0, 100))
-        screen.blit(s, (col * SQUARE_SIZE, row * SQUARE_SIZE))
+    # Display game over message
+    if game_over:
+        font = pygame.font.SysFont("Arial", 48)
+        if checkmate:
+            text = font.render(f"Checkmate! {'Black' if turn == 'w' else 'White'} wins!", True, (255, 0, 0))
+        else:
+            text = font.render("Stalemate! It's a draw.", True, (255, 0, 0))
+        text_rect = text.get_rect(center=(WIDTH//2, HEIGHT//2))
+        screen.blit(text, text_rect)
     
     pygame.display.flip()
 
