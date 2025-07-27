@@ -358,7 +358,7 @@ def minimax(board, depth, alpha, beta, maximizing_player):
         return min_eval, best_move
 
 def ai_move():
-    _, best_move = minimax(chess_board, 2, -math.inf, math.inf, True)  # Reduced depth to 2 for faster response
+    _, best_move = minimax(chess_board, 2, -math.inf, math.inf, True)  
     if best_move:
         start, end = best_move
         piece = chess_board[start[0]][start[1]]

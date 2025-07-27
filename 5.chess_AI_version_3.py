@@ -42,12 +42,13 @@ chess_board = [
 
 class AIPlayer:
     def __init__(self):
-        self.max_depth = 3  # Reduced from 4
-        self.nodes_searched = 0
-        self.max_nodes = 5000  # Limit nodes searched per move
+        self.max_depth = 3
+        self.nodes_searched = 0 # The max number of moves the Ai will samulating
+        self.max_nodes = 2000 # Limit nodes searched per move
+
     
     def evaluate_board(self, board):
-        """Simplified evaluation function"""
+        
         score = 0
         for row in range(8):
             for col in range(8):
@@ -127,12 +128,12 @@ class AIPlayer:
 
         # Rook movement
         elif piece_type == 'r':
-            if start_row == end_row:  # Horizontal
+            if start_row == end_row:  
                 step = 1 if end_col > start_col else -1
                 for col in range(start_col + step, end_col, step):
                     if chess_board[start_row][col] != "":
                         return False
-            elif start_col == end_col:  # Vertical
+            elif start_col == end_col:  
                 step = 1 if end_row > start_row else -1
                 for row in range(start_row + step, end_row, step):
                     if chess_board[row][start_col] != "":
@@ -143,7 +144,7 @@ class AIPlayer:
 
         # Queen movement
         elif piece_type == 'q':
-            if start_row == end_row or start_col == end_col:  # Rook-like
+            if start_row == end_row or start_col == end_col:  
                 if start_row == end_row:
                     step = 1 if end_col > start_col else -1
                     for col in range(start_col + step, end_col, step):
@@ -154,7 +155,7 @@ class AIPlayer:
                     for row in range(start_row + step, end_row, step):
                         if chess_board[row][start_col] != "":
                             return False
-            elif abs(start_row - end_row) == abs(start_col - end_col):  # Bishop-like
+            elif abs(start_row - end_row) == abs(start_col - end_col):  
                 row_step = 1 if end_row > start_row else -1
                 col_step = 1 if end_col > start_col else -1
                 row, col = start_row + row_step, start_col + col_step

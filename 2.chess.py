@@ -163,7 +163,7 @@ def is_valid_move(piece, start, end):
 
     # Queen movement (rook + bishop)
     elif piece_type == 'q':
-        if start_row == end_row or start_col == end_col:  # Rook-like
+        if start_row == end_row or start_col == end_col:
             if start_row == end_row:
                 step = 1 if end_col > start_col else -1
                 for col in range(start_col + step, end_col, step):
@@ -174,7 +174,7 @@ def is_valid_move(piece, start, end):
                 for row in range(start_row + step, end_row, step):
                     if chess_board[row][start_col] != "":
                         return False
-        elif abs(start_row - end_row) == abs(start_col - end_col):  # Bishop-like
+        elif abs(start_row - end_row) == abs(start_col - end_col): 
             row_step = 1 if end_row > start_row else -1
             col_step = 1 if end_col > start_col else -1
             row, col = start_row + row_step, start_col + col_step
@@ -208,7 +208,7 @@ def is_king_in_check(board, color):
                 enemy_pieces.append((piece, (r, c)))
 
     if king_pos is None:
-        return False  # Shouldn't happen in a valid game
+        return False  
 
     # Check if any enemy piece can attack the king
     for piece, pos in enemy_pieces:
