@@ -42,9 +42,9 @@ chess_board = [
 
 class AIPlayer:
     def __init__(self):
-        self.max_depth = 3
-        self.nodes_searched = 0 # The max number of moves the Ai will samulating
-        self.max_nodes = 2000 # Limit nodes searched per move
+        self.max_depth = 2 # The max number of moves the Ai will samulating
+        self.nodes_searched = 0 
+        self.max_nodes = 1500 # Limit nodes searched per move
 
     
     def evaluate_board(self, board):
